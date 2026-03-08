@@ -3,7 +3,9 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/pulkitbhatt/ikiru/internal/handler/dto"
 	"github.com/pulkitbhatt/ikiru/internal/model"
@@ -40,7 +42,7 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 		userID,
 		req.Name,
 		req.URL,
-		req.IntervalSeconds,
+		req.IntervalSeconds, 
 		req.TimeoutMs,
 		req.Description,
 	)
@@ -67,5 +69,46 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 		"data": map[string]any{
 			"id": monitor.ID,
 		},
+	})
+}
+
+func (h *MonitorHandler) GetMonitors(c echo.Context) error {
+	ctx := c.Request().Context()
+	log := LoggerFromContext(c)
+	userId := GetUserID(c)
+
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+
+	monitors, err := h.monitorService.GetMonitors(ctx, userId, limit, offset)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get monitors")
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get monitors")
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"success": true,
+		"data": map[string]any{"monitors": monitors},
+	})
+}
+
+func (h *MonitorHandler) GetMonitorById(c echo.Context) error {
+	ctx := c.Request().Context()
+	log := LoggerFromContext(c)
+	monitorId := 	c.Param("monitorId")
+	id, err := uuid.Parse(monitorId)
+	if err != nil{
+		log.Error().Err(err).Msg("invalid monitor id")
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid monitor id")
+	}
+
+	monitor, err := h.monitorService.GetMonitorById(ctx, id);
+	if err != nil{
+		log.Error().Err(err).Str("id", id.String()).Msg("failed to get monitor with id")
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get monitor")
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"success": true,
+		"data":    map[string]any{"monitor": monitor},
 	})
 }
