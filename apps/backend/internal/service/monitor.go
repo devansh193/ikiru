@@ -13,7 +13,7 @@ import (
 type MonitorRepository interface {
 	CreateMonitor(ctx context.Context, m *model.Monitor) error
 	GetMonitors(ctx context.Context, userID string, limit, offset int) ([]model.Monitor, error)
-	GetMonitorById(ctx context.Context, id string)(model.Monitor, error)
+	GetMonitorById(ctx context.Context, id string, ownerUserID string) (model.Monitor, error)
 }
 
 type MonitorService struct {
@@ -65,11 +65,15 @@ func (s *MonitorService) GetMonitors(ctx context.Context, userID uuid.UUID, limi
 	return monitors, nil
 }
 
-func (s *MonitorService) GetMonitorById(ctx context.Context, id uuid.UUID)(model.Monitor, error){
-	logger := zerolog.Ctx(ctx);
-	monitor, err := s.monitorRepo.GetMonitorById(ctx, id.String())
-	if err != nil{
-		logger.Error().Err(err).Str("id", id.String()).Msg("failed to get monitor with given id")
+func (s *MonitorService) GetMonitorById(ctx context.Context, userID, id uuid.UUID) (model.Monitor, error) {
+	logger := zerolog.Ctx(ctx)
+	monitor, err := s.monitorRepo.GetMonitorById(ctx, id.String(), userID.String())
+	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("id", id.String()).
+			Str("user_id", userID.String()).
+			Msg("failed to get monitor with given id")
 		return model.Monitor{}, fmt.Errorf("failed to get monitor: %w", err)
 	}
 	return monitor, nil

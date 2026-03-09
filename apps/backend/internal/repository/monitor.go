@@ -135,13 +135,28 @@ RETURNING
 func (mr *MonitorRepo) GetMonitorById(
 	ctx context.Context,
 	id string,
-)(model.Monitor, error){
+	ownerUserID string,
+) (model.Monitor, error) {
 	query := `
-	SELECT id, name
+	SELECT
+		id,
+		owner_user_id,
+		name,
+		description,
+		type,
+		url,
+		interval_seconds,
+		timeout_ms,
+		status,
+		deleted_at,
+		last_checked_at,
+		next_check_at,
+		created_at,
+		updated_at
 	FROM monitors
-	WHERE id = $1
+	WHERE id = $1 AND owner_user_id = $2
 	`
-	row, err := mr.db.Query(ctx, query, id)
+	row, err := mr.db.Query(ctx, query, id, ownerUserID)
 	if err != nil {
 		return model.Monitor{}, fmt.Errorf("query monitor: %w", err)
 	}
@@ -150,7 +165,22 @@ func (mr *MonitorRepo) GetMonitorById(
 		return model.Monitor{}, fmt.Errorf("monitor not found")
 	}
 	var monitor model.Monitor
-	if err := row.Scan(&monitor.ID, &monitor.Name); err != nil {
+	if err := row.Scan(
+		&monitor.ID,
+		&monitor.OwnerUserID,
+		&monitor.Name,
+		&monitor.Description,
+		&monitor.Type,
+		&monitor.URL,
+		&monitor.IntervalSeconds,
+		&monitor.TimeoutMs,
+		&monitor.Status,
+		&monitor.DeletedAt,
+		&monitor.LastCheckedAt,
+		&monitor.NextCheckAt,
+		&monitor.CreatedAt,
+		&monitor.UpdatedAt,
+	); err != nil {
 		return model.Monitor{}, fmt.Errorf("scan monitor: %w", err)
 	}
 	return monitor, nil
